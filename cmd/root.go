@@ -27,7 +27,7 @@ func init() {
 	rootCmd.Flags().IntVarP(&options.MaxBufferedMessages, "maxJobs", "m", 10, "Provide the limit of messages to receive (max. 10)")
 	rootCmd.Flags().StringVarP(&options.DefaultHttpPath, "httpPath", "p", "/", "Provide the HTTP Path of the API to hit with POST request of the job")
 
-	rootCmd.Flags().StringVarP(&options.ApiHost, "host", "h", "http://localhost:80", "Provide the Host on which API is listening")
+	rootCmd.Flags().StringVarP(&options.ApiHost, "host", "a", "http://localhost:80", "Provide the Host on which API is listening")
 }
 
 func runWorker(cmd *cobra.Command, args []string) {
