@@ -3,24 +3,26 @@ package pkg
 import (
 	"time"
 
+	"github.com/shivanshs9/eb-worker-queue/pkg/http"
 	"github.com/shivanshs9/eb-worker-queue/pkg/sqs"
 	"github.com/sirupsen/logrus"
 )
 
-func StartApp() {
-	logger := logrus.New()
-	client := sqs.NewSqsClient(logger)
+type AppOptions struct {
+	sqs.ReceiveMessageOptions
+	ApiHost string
+}
+
+func StartApp(options *AppOptions, log *logrus.Logger) {
+	client := sqs.NewSqsClient(log)
+	httpClient := http.NewAPIClient(options.ApiHost, log)
 
 	stop := make(chan struct{})
-	options := sqs.ReceiveMessageOptions{
-		QueueUrl:            "",
-		MaxBufferedMessages: 10,
-	}
-	stream := client.ReceiveMessageStream(options, stop)
+	stream := client.ReceiveMessageStream(options.ReceiveMessageOptions, stop)
 	for {
 		select {
-		case <-stream:
-			logger.Info("Point!")
+		case job := <-stream:
+			log.Info(job.String())
 		case <-time.After(time.Second * 65):
 			close(stop)
 			return

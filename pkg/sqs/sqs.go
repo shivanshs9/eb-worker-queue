@@ -1,6 +1,8 @@
 package sqs
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/sirupsen/logrus"
@@ -17,13 +19,23 @@ type ReceiveMessageOptions struct {
 	QueueUrl            string
 	MaxBufferedMessages int
 	RetryCount          int
+	DefaultHttpPath     string
 }
 
-type SQSMessage struct {
+type SQSJobRequest struct {
+	AttrJobPath          string
+	AttrJobScheduledTime string
+	AttrJobTaskName      string
+
+	SqsMsgId           string
+	SqsQueueUrl        string
+	SqsFirstReceivedAt string
+
+	Body string
 }
 
-func (msg SQSMessage) String() string {
-	return "MSG"
+func (msg SQSJobRequest) String() string {
+	return fmt.Sprintf("[%v]: %v [%v] [%v]", msg.SqsMsgId, msg.Body, msg.AttrJobTaskName, msg.AttrJobPath)
 }
 
 func NewSqsClient(log *logrus.Logger) *Client {
@@ -34,10 +46,10 @@ func NewSqsClient(log *logrus.Logger) *Client {
 	}
 }
 
-func (client *Client) ReceiveMessageStream(options ReceiveMessageOptions, stop chan struct{}) chan SQSMessage {
+func (client *Client) ReceiveMessageStream(options ReceiveMessageOptions, stop chan struct{}) chan *SQSJobRequest {
 	// errors will be logged and ignored
 	client.log.Info("Starting the SQS Messages Stream")
-	stream := make(chan SQSMessage, options.MaxBufferedMessages)
+	stream := make(chan *SQSJobRequest, options.MaxBufferedMessages)
 	errorCnt := 0
 	go func() {
 		for {
@@ -66,7 +78,7 @@ func (client *Client) ReceiveMessageStream(options ReceiveMessageOptions, stop c
 	return stream
 }
 
-func (client *Client) receiveMessage(options ReceiveMessageOptions) (messages []SQSMessage, err error) {
+func (client *Client) receiveMessage(options ReceiveMessageOptions) (jobs []*SQSJobRequest, err error) {
 	maxMsgCount := int64(options.MaxBufferedMessages)
 	waitTime := int64(20)
 	attributeName := "*"
@@ -81,9 +93,30 @@ func (client *Client) receiveMessage(options ReceiveMessageOptions) (messages []
 		return
 	}
 	for _, msg := range output.Messages {
-		client.log.Info(msg.String())
-		sqsMsg := SQSMessage{}
-		messages = append(messages, sqsMsg)
+		client.log.Debugf("Received message, %v", msg)
+		jobPath := options.DefaultHttpPath
+		if path, found := msg.MessageAttributes["beanstalk.sqsd.path"]; found {
+			jobPath = *path.StringValue
+		}
+		attrScheduledTime := ""
+		if time, found := msg.MessageAttributes["beanstalk.sqsd.scheduled_time"]; found {
+			attrScheduledTime = *time.StringValue
+		}
+		attrTaskName := ""
+		if taskName, found := msg.MessageAttributes["beanstalk.sqsd.task_name"]; found {
+			attrTaskName = *taskName.StringValue
+		}
+		job := &SQSJobRequest{
+			SqsMsgId:    *msg.MessageId,
+			SqsQueueUrl: options.QueueUrl,
+
+			AttrJobPath:          jobPath,
+			AttrJobScheduledTime: attrScheduledTime,
+			AttrJobTaskName:      attrTaskName,
+
+			Body: *msg.Body,
+		}
+		jobs = append(jobs, job)
 	}
 	return
 }
