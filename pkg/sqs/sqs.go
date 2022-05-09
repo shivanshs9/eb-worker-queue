@@ -32,6 +32,8 @@ type SQSJobRequest struct {
 	SqsFirstReceivedAt string
 
 	Body string
+
+	receiptHandle string
 }
 
 func (msg SQSJobRequest) String() string {
@@ -78,6 +80,19 @@ func (client *Client) ReceiveMessageStream(options ReceiveMessageOptions, stop c
 	return stream
 }
 
+func (client *Client) AcknowledgeMessage(job *SQSJobRequest) error {
+	input := &sqs.DeleteMessageInput{
+		QueueUrl:      &job.SqsQueueUrl,
+		ReceiptHandle: &job.receiptHandle,
+	}
+	_, err := client.sqs.DeleteMessage(input)
+	if err != nil {
+		return err
+	}
+	client.log.Infof("[%v] Deleted message from the SQS", job.SqsMsgId)
+	return nil
+}
+
 func (client *Client) receiveMessage(options ReceiveMessageOptions) (jobs []*SQSJobRequest, err error) {
 	maxMsgCount := int64(options.MaxBufferedMessages)
 	waitTime := int64(20)
@@ -114,7 +129,8 @@ func (client *Client) receiveMessage(options ReceiveMessageOptions) (jobs []*SQS
 			AttrJobScheduledTime: attrScheduledTime,
 			AttrJobTaskName:      attrTaskName,
 
-			Body: *msg.Body,
+			Body:          *msg.Body,
+			receiptHandle: *msg.ReceiptHandle,
 		}
 		jobs = append(jobs, job)
 	}

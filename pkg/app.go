@@ -3,6 +3,7 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/shivanshs9/eb-worker-queue/pkg/http"
 	"github.com/shivanshs9/eb-worker-queue/pkg/sqs"
@@ -22,6 +23,11 @@ type AppCls struct {
 }
 
 func (app *AppCls) processJob(job *sqs.SQSJobRequest) error {
+	// to track execution time
+	defer func(start time.Time) {
+		app.log.Infof("[%v] Took %v", job.SqsMsgId, time.Since(start))
+	}(time.Now())
+
 	app.log.Infof("[%v] Sending POST to %v", job.SqsMsgId, job.AttrJobPath)
 	resp, err := app.httpClient.PostRequest(*job)
 	if resp != nil {
@@ -42,7 +48,8 @@ func (app *AppCls) start() {
 		if err := app.processJob(job); err != nil {
 			app.log.Warnf("[%v] Encountered error in processing job: %v", job.SqsMsgId, err)
 		} else {
-
+			app.log.Infof("[%v] Finished execution successfully.", job.SqsMsgId)
+			app.sqsClient.AcknowledgeMessage(job)
 		}
 	}
 }
