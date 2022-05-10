@@ -42,6 +42,7 @@ func (app *AppCls) processJob(job *sqs.SQSJobRequest) error {
 }
 
 func (app *AppCls) start() {
+	app.log.Infof("Starting the app with following config: %v", *app.options)
 	stop := make(chan struct{})
 	stream := app.sqsClient.ReceiveMessageStream(app.options.ReceiveMessageOptions, stop)
 	for job := range stream {
