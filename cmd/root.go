@@ -10,7 +10,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "sqsd ",
+	Use:   "sqsd",
 	Short: "Start the SQS worker, polling and forwarding the messages via HTTP requests",
 	Run:   runWorker,
 }
@@ -35,6 +35,9 @@ func runWorker(cmd *cobra.Command, args []string) {
 	log.Info("Verbose logging enabled")
 	if debug {
 		log.SetLevel(logrus.DebugLevel)
+	}
+	if options.MaxBufferedMessages > 10 {
+		options.MaxBufferedMessages = 10
 	}
 	app.StartApp(options, log)
 }
