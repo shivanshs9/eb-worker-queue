@@ -34,7 +34,7 @@ func (client *APIClient) PostRequest(request sqs.SQSJobRequest) (resp *http.Resp
 	}
 	url.Path = path.Join(url.Path, request.AttrJobPath)
 
-	httpReq, err := http.NewRequest("POST", url.String(), bytes.NewBufferString(request.Body))
+	httpReq, err := http.NewRequest("POST", url.String(), bytes.NewBufferString("")) // request.Body unused for now
 	if err != nil {
 		return
 	}
