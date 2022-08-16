@@ -62,5 +62,6 @@ func StartApp(options *AppOptions, log *logrus.Logger) {
 		log:        log,
 		options:    options,
 	}
+	app.httpClient.WaitServerStartup()
 	app.start()
 }

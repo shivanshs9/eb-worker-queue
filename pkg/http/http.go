@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"time"
 
 	"github.com/shivanshs9/eb-worker-queue/pkg/sqs"
 	"github.com/sirupsen/logrus"
@@ -24,6 +25,22 @@ func NewAPIClient(host string, log *logrus.Logger) *APIClient {
 		host:        host,
 		contentType: "application/json",
 		log:         log,
+	}
+}
+
+func (client *APIClient) WaitServerStartup() {
+	attempt := 0
+	for {
+		client.log.Infof("[Attempt %v] Verify API by GET %v", attempt, client.host)
+		req, err := http.NewRequest("GET", client.host, nil)
+		if err != nil {
+			return
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil && resp.StatusCode == 200 {
+			return
+		}
+		time.Sleep(5 * time.Second)
 	}
 }
 
