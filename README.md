@@ -1,4 +1,4 @@
-## EB-Worker-Queue
+## [EB-Worker-Queue](https://github.com/shivanshs9/eb-worker-queue)
 
 Provides an open-source implementation to [AWS in-built sqsd daemon](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features-managing-env-tiers.html#worker-daemon) in its EB worker platform.
 
